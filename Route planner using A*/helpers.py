@@ -1,7 +1,8 @@
 
 import networkx as nx
 import pickle
-import plotly.plotly as py
+import chart_studio.plotly as py 
+import plotly.graph_objects as go
 import random
 from plotly.graph_objs import *
 from plotly.offline import init_notebook_mode, plot, iplot
@@ -95,26 +96,37 @@ def load_map_40():
 def show_map(M, start=None, goal=None, path=None):
     G = M._graph
     pos = nx.get_node_attributes(G, 'pos')
+    
+    edge_x=[];
+    edge_y=[];
+    
+    
+
+    for edge in G.edges():
+        x0, y0 = G.nodes[edge[0]]['pos']
+        x1, y1 = G.nodes[edge[1]]['pos']
+    
+        edge_x.extend([x0, x1, None])  # Extend safely
+        edge_y.extend([y0, y1, None])
+        #edge_trace['x'] += [x0, x1, None]
+        #edge_trace['y'] += [y0, y1, None]
+        
     edge_trace = Scatter(
-    x=[],
-    y=[],
-    line=Line(width=0.5,color='#888'),
+    x=edge_x,
+    y=edge_y,
+    line=scatter.Line(width=0.5,color='#888'),
     hoverinfo='none',
     mode='lines')
 
-    for edge in G.edges():
-        x0, y0 = G.node[edge[0]]['pos']
-        x1, y1 = G.node[edge[1]]['pos']
-        edge_trace['x'] += [x0, x1, None]
-        edge_trace['y'] += [y0, y1, None]
-
+ 
+    
     node_trace = Scatter(
         x=[],
         y=[],
         text=[],
         mode='markers',
         hoverinfo='text',
-        marker=Marker(
+        marker=scatter.Marker(
             showscale=False,
             # colorscale options
             # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
@@ -130,12 +142,17 @@ def show_map(M, start=None, goal=None, path=None):
                 titleside='right'
             ),
             line=dict(width=2)))
+    
     for node in G.nodes():
-        x, y = G.node[node]['pos']
-        node_trace['x'].append(x)
-        node_trace['y'].append(y)
+        x, y = G.nodes[node]['pos']
+        node_trace['x'] = list(node_trace['x'])  # Ensure x is a list
+        node_trace['y'] = list(node_trace['y'])  # Ensure y is a list
+       
+        node_trace['x'] = node_trace['x'] + (x,)  # Concatenate the tuple (x,)
+        node_trace['y'] = node_trace['y'] + (y,)  # Concatenate the tuple (y,)
 
-    for node, adjacencies in enumerate(G.adjacency_list()):
+
+    for node, adjacencies in G.adj.items():
         color = 0
         if path and node in path:
             color = 2
@@ -144,19 +161,21 @@ def show_map(M, start=None, goal=None, path=None):
         elif node == goal:
             color = 1
         # node_trace['marker']['color'].append(len(adjacencies))
-        node_trace['marker']['color'].append(color)
+        node_trace['marker']['color']= node_trace['marker']['color']+ (color,);
         node_info = "Intersection " + str(node)
-        node_trace['text'].append(node_info)
+        node_trace['text']=node_trace['text']+ (node_info,);
+    
+    fig = Figure(
+    data=[edge_trace, node_trace],  # Use a list instead of Data()
+    layout=Layout(
+        title='<br>Network graph made with Python',
+        titlefont=dict(size=16),
+        showlegend=False,
+        hovermode='closest',
+        margin=dict(b=20, l=5, r=5, t=40),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),  # Replaced XAxis
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))   # Replaced YAxis
 
-    fig = Figure(data=Data([edge_trace, node_trace]),
-                 layout=Layout(
-                    title='<br>Network graph made with Python',
-                    titlefont=dict(size=16),
-                    showlegend=False,
-                    hovermode='closest',
-                    margin=dict(b=20,l=5,r=5,t=40),
-                   
-                    xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
-                    yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
+    
 
     iplot(fig)
